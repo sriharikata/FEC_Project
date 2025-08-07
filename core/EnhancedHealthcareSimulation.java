@@ -44,6 +44,8 @@ public class EnhancedHealthcareSimulation {
         List<Vm> vmList = createVMs();
         broker.submitVmList(vmList);
         System.out.printf("🖥️ Created %d VMs across fog and cloud datacenters%n", vmList.size());
+        // Step 4: Create and submit VMs with explicit datacenter assignment
+//        createAndSubmitVMs(broker, fogDC, cloudDC);
 
         // Step 5: Generate realistic healthcare IoT data
         System.out.println("\n📊 Generating healthcare IoT data scenarios...");
@@ -137,4 +139,55 @@ public class EnhancedHealthcareSimulation {
 
         return vmList;
     }
+    
+    /**
+    * Creates and submits VMs with explicit datacenter assignment
+    */
+   private static void createAndSubmitVMs(EnhancedHealthcareServiceBroker broker, 
+                                        Datacenter fogDC, Datacenter cloudDC) {
+       System.out.println("🖥️ Creating healthcare-optimized VMs...");
+       
+       // Critical processing VMs for FOG datacenter (VMs 0-3)
+       List<Vm> fogVMs = new ArrayList<>();
+       for (int i = 0; i < 4; i++) {
+           Vm vm = new VmSimple(3000 + (i * 200), 2);
+           vm.setRam(4096).setBw(10000).setSize(50000);
+           vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+           fogVMs.add(vm);
+           if (i < 2) {
+               System.out.printf("   Critical VM %d: %d MIPS, 2 cores (Fog-optimized)%n", i, 3000 + (i * 200));
+           }
+       }
+       
+       // Submit FOG VMs to specific datacenter
+       broker.submitVmList(fogVMs, fogDC);
+       
+       // Cloud processing VMs for CLOUD datacenter (VMs 4-11)
+       List<Vm> cloudVMs = new ArrayList<>();
+       
+       // Monitoring VMs (balanced) for cloud
+       for (int i = 4; i < 8; i++) {
+           Vm vm = new VmSimple(2000 + (i * 100), 2);
+           vm.setRam(2048).setBw(8000).setSize(40000);
+           vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+           cloudVMs.add(vm);
+       }
+
+       // Consultation VMs (cloud)
+       for (int i = 8; i < 12; i++) {
+           Vm vm = new VmSimple(1500 + (i * 50), 1);
+           vm.setRam(1024).setBw(5000).setSize(30000);
+           vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
+           cloudVMs.add(vm);
+           if (i >= 10) {
+               System.out.printf("   Consultation VM %d: %d MIPS, 1 core (Cloud-optimized)%n", i, 1500 + (i * 50));
+           }
+       }
+       
+       // Submit CLOUD VMs to specific datacenter
+       broker.submitVmList(cloudVMs, cloudDC);
+       
+       System.out.printf("🖥️ Created %d VMs: %d in Fog, %d in Cloud%n", 
+                        fogVMs.size() + cloudVMs.size(), fogVMs.size(), cloudVMs.size());
+   }
 }

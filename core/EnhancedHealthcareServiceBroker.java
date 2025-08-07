@@ -5,6 +5,7 @@ import org.cloudbus.cloudsim.brokers.DatacenterBrokerSimple;
 import org.cloudbus.cloudsim.cloudlets.Cloudlet;
 import org.cloudbus.cloudsim.cloudlets.CloudletSimple;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.core.CloudSimTags;
 import org.cloudbus.cloudsim.datacenters.Datacenter;
 import org.cloudbus.cloudsim.utilizationmodels.UtilizationModelFull;
 import org.cloudbus.cloudsim.vms.Vm;
@@ -315,6 +316,37 @@ public class EnhancedHealthcareServiceBroker extends DatacenterBrokerSimple {
             record.slaCompliant ? "✓" : "⚠️");
     }
 
+
+    /**
+     * Submits VM list to a specific datacenter with allocation preference
+     */
+    public void submitVmList(List<Vm> vmList, Datacenter targetDatacenter) {
+        // Set datacenter preference for each VM
+        for (Vm vm : vmList) {
+            // Store preference in VM or use a map
+            setVmDatacenterPreference(vm, targetDatacenter.getName());
+        }
+        
+        // Submit VMs normally - the custom allocation policy will handle placement
+        submitVmList(vmList);
+        
+        System.out.printf("📤 Submitted %d VMs targeting %s%n", vmList.size(), targetDatacenter.getName());
+    }
+
+    /**
+     * Sets datacenter preference for allocation policies
+     */
+    private void setVmDatacenterPreference(Vm vm, String datacenterName) {
+        // Get the allocation policy for the target datacenter and set preference
+        if ("Fog_DC".equals(datacenterName)) {
+            HealthcareVmAllocationPolicy fogPolicy = (HealthcareVmAllocationPolicy) fogDC.getVmAllocationPolicy();
+            fogPolicy.setVmDatacenterPreference(vm, datacenterName);
+        } else if ("Cloud_DC".equals(datacenterName)) {
+            HealthcareVmAllocationPolicy cloudPolicy = (HealthcareVmAllocationPolicy) cloudDC.getVmAllocationPolicy();
+            cloudPolicy.setVmDatacenterPreference(vm, datacenterName);
+        }
+    }
+  
     /**
      * Generates comprehensive performance analysis report
      */
