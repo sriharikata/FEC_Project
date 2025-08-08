@@ -37,6 +37,7 @@ public class HealthcareVmAllocationPolicy extends VmAllocationPolicyAbstract {
     public HostSuitability allocateHostForVm(Vm vm) {
         // Check if this VM should be allocated to this datacenter
         String intendedDC = vmDatacenterMap.get(vm.getId());
+        System.out.println("🧩 VM Pref Map in 1: " + vmDatacenterMap);
         
         if (intendedDC != null && !intendedDC.equals(datacenterName)) {
             System.out.printf("🚫 Rejecting VM %d allocation (intended for %s, this is %s)%n", 
@@ -77,6 +78,7 @@ public class HealthcareVmAllocationPolicy extends VmAllocationPolicyAbstract {
     public HostSuitability allocateHostForVm(Vm vm, Host host) {
         // Check datacenter preference first
         String intendedDC = vmDatacenterMap.get(vm.getId());
+        System.out.println("🧩 VM Pref Map in 2: " + vmDatacenterMap);
         if (intendedDC != null && !intendedDC.equals(datacenterName)) {
             return new HostSuitability("VM is intended for " + intendedDC + " but this is " + datacenterName);
         }
@@ -114,4 +116,9 @@ public class HealthcareVmAllocationPolicy extends VmAllocationPolicyAbstract {
         
         return findSuitableHost(vm);
     }
+    
+    public Map<Long, String> getVmDatacenterMap() {
+        return vmDatacenterMap;
+    }
+
 }

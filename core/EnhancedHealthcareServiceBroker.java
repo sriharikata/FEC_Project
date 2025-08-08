@@ -53,6 +53,14 @@ public class EnhancedHealthcareServiceBroker extends DatacenterBrokerSimple {
         this.cloudletTaskMap = new HashMap<>();
         this.datacenterTaskCount = new HashMap<>();
         this.performanceRecords = new ArrayList<>();
+        this.setDatacenterMapper((prevDc, vm) -> {
+            String preferred = vm.getMips() >= 2500 ? "Fog_DC" : "Cloud_DC";
+
+            return getDatacenterList().stream()
+                .filter(dc -> dc.getName().equals(preferred))
+                .findFirst()
+                .orElse(Datacenter.NULL); // return NULL if nothing matches
+        });
 
         // Initialize datacenter counters
         datacenterTaskCount.put("Fog_DC", 0);
@@ -319,35 +327,35 @@ public class EnhancedHealthcareServiceBroker extends DatacenterBrokerSimple {
     }
 
 
-    /**
-     * Submits VM list to a specific datacenter with allocation preference
-     */
-    public void submitVmList(List<Vm> vmList, Datacenter targetDatacenter) {
-        // Set datacenter preference for each VM
-        for (Vm vm : vmList) {
-            // Store preference in VM or use a map
-            setVmDatacenterPreference(vm, targetDatacenter.getName());
-        }
-        
-        // Submit VMs normally - the custom allocation policy will handle placement
-        submitVmList(vmList);
-        
-        System.out.printf("📤 Submitted %d VMs targeting %s%n", vmList.size(), targetDatacenter.getName());
-    }
-
-    /**
-     * Sets datacenter preference for allocation policies
-     */
-    private void setVmDatacenterPreference(Vm vm, String datacenterName) {
-        // Get the allocation policy for the target datacenter and set preference
-        if ("Fog_DC".equals(datacenterName)) {
-            HealthcareVmAllocationPolicy fogPolicy = (HealthcareVmAllocationPolicy) fogDC.getVmAllocationPolicy();
-            fogPolicy.setVmDatacenterPreference(vm, datacenterName);
-        } else if ("Cloud_DC".equals(datacenterName)) {
-            HealthcareVmAllocationPolicy cloudPolicy = (HealthcareVmAllocationPolicy) cloudDC.getVmAllocationPolicy();
-            cloudPolicy.setVmDatacenterPreference(vm, datacenterName);
-        }
-    }
+//    /**
+//     * Submits VM list to a specific datacenter with allocation preference
+//     */
+//    public void submitVmList(List<Vm> vmList, Datacenter targetDatacenter) {
+//        // Set datacenter preference for each VM
+//        for (Vm vm : vmList) {
+//            // Store preference in VM or use a map
+//            setVmDatacenterPreference(vm, targetDatacenter.getName());
+//        }
+//        
+//        // Submit VMs normally - the custom allocation policy will handle placement
+//        submitVmList(vmList);
+//        
+//        System.out.printf("📤 Submitted %d VMs targeting %s%n", vmList.size(), targetDatacenter.getName());
+//    }
+//
+//    /**
+//     * Sets datacenter preference for allocation policies
+//     */
+//    private void setVmDatacenterPreference(Vm vm, String datacenterName) {
+//        // Get the allocation policy for the target datacenter and set preference
+//        if ("Fog_DC".equals(datacenterName)) {
+//            HealthcareVmAllocationPolicy fogPolicy = (HealthcareVmAllocationPolicy) fogDC.getVmAllocationPolicy();
+//            fogPolicy.setVmDatacenterPreference(vm, datacenterName);
+//        } else if ("Cloud_DC".equals(datacenterName)) {
+//            HealthcareVmAllocationPolicy cloudPolicy = (HealthcareVmAllocationPolicy) cloudDC.getVmAllocationPolicy();
+//            cloudPolicy.setVmDatacenterPreference(vm, datacenterName);
+//        }
+//    }
   
     /**
      * Generates comprehensive performance analysis report

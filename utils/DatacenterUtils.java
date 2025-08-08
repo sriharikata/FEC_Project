@@ -1,6 +1,7 @@
 package org.cloudbus.cloudsim.fec_healthsim.utils;
 
-import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicySimple;
+//import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicySimple; //Commenting this to use the new custom policy
+import org.cloudbus.cloudsim.fec_healthsim.core.HealthcareVmAllocationPolicy;
 import org.cloudbus.cloudsim.datacenters.Datacenter;
 import org.cloudbus.cloudsim.datacenters.DatacenterSimple;
 import org.cloudbus.cloudsim.hosts.Host;
@@ -29,7 +30,9 @@ public class DatacenterUtils {
             hostList.add(host);
         }
 
-        Datacenter datacenter = new DatacenterSimple(simulation, hostList, new VmAllocationPolicySimple());
+//        Datacenter datacenter = new DatacenterSimple(simulation, hostList, new VmAllocationPolicySimple());
+        HealthcareVmAllocationPolicy policy = new HealthcareVmAllocationPolicy(name);
+        Datacenter datacenter = new DatacenterSimple(simulation, hostList, policy);
         datacenter.setName(name);
         return datacenter;
     }

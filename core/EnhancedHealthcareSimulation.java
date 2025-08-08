@@ -11,7 +11,7 @@ import org.cloudbus.cloudsim.vms.Vm;
 import org.cloudbus.cloudsim.vms.VmSimple;
 import org.cloudbus.cloudsim.schedulers.cloudlet.CloudletSchedulerTimeShared;
 import org.cloudbus.cloudsim.schedulers.vm.VmSchedulerTimeShared;
-import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicySimple;
+//import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicySimple;
 
 import org.cloudbus.cloudsim.fec_healthsim.data.HealthcareDataLoader;
 import org.cloudbus.cloudsim.fec_healthsim.data.HealthcareDataPacket;
@@ -42,6 +42,11 @@ public class EnhancedHealthcareSimulation {
         System.out.println("\n🏗️ INFRASTRUCTURE SETUP:");
         Datacenter fogDC = createDatacenter(simulation, "Fog_DC", 2, 15000, true);
         Datacenter cloudDC = createDatacenter(simulation, "Cloud_DC", 4, 10000, false);
+        HealthcareVmAllocationPolicy fogPolicy = 
+        	    (HealthcareVmAllocationPolicy) fogDC.getVmAllocationPolicy();
+
+        HealthcareVmAllocationPolicy cloudPolicy = 
+        	    (HealthcareVmAllocationPolicy) cloudDC.getVmAllocationPolicy();
 
         // Step 3: Create enhanced healthcare service broker
         System.out.println("\n🤖 SERVICE BROKER INITIALIZATION:");
@@ -50,7 +55,21 @@ public class EnhancedHealthcareSimulation {
         // Step 4: Create and submit VMs with healthcare workload optimization
         System.out.println("\n🖥️ VIRTUAL MACHINE DEPLOYMENT:");
         List<Vm> vmList = createVMs();
+        
+        for (Vm vm : vmList) {
+            if (vm.getMips() >= 2500) {
+                fogPolicy.setVmDatacenterPreference(vm, "Fog_DC");
+            } else {
+                cloudPolicy.setVmDatacenterPreference(vm, "Cloud_DC");
+            }
+        }
+    
         broker.submitVmList(vmList);
+        System.out.println("🌍 Fog Policy Map: " + fogPolicy.getVmDatacenterMap());
+        System.out.println("🌍 Cloud Policy Map: " + cloudPolicy.getVmDatacenterMap());
+
+     
+
         System.out.printf("✅ Deployed %d healthcare-optimized VMs across datacenters%n", vmList.size());
 
         // Step 5: Generate comprehensive healthcare IoT data scenarios
@@ -138,8 +157,9 @@ public class EnhancedHealthcareSimulation {
             host.setVmScheduler(new VmSchedulerTimeShared());
             hostList.add(host);
         }
-
-        Datacenter datacenter = new DatacenterSimple(simulation, hostList, new VmAllocationPolicySimple());
+        HealthcareVmAllocationPolicy policy = new HealthcareVmAllocationPolicy(name);
+        Datacenter datacenter = new DatacenterSimple(simulation, hostList, policy);
+//        Datacenter datacenter = new DatacenterSimple(simulation, hostList, new VmAllocationPolicySimple());
         datacenter.setName(name);
         
         System.out.printf("   ✅ %s deployed: %d hosts, %d total cores, %s optimized%n",
@@ -153,13 +173,14 @@ public class EnhancedHealthcareSimulation {
      */
     private static List<Vm> createVMs() {
         List<Vm> vmList = new ArrayList<>();
+        int vmIdCounter = 0;
         System.out.println("🖥️ Deploying healthcare-optimized virtual machines:");
 
         // Critical Processing VMs (Fog-optimized for emergency tasks)
         System.out.println("   Creating Critical Processing VMs (Fog-optimized):");
         for (int i = 0; i < 4; i++) {
             int mips = 3000 + (i * 200); // High MIPS for critical tasks
-            Vm vm = new VmSimple(mips, 2);
+            Vm vm = new VmSimple(vmIdCounter++,mips, 2);
             vm.setRam(4096).setBw(10000).setSize(50000);
             vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
             vmList.add(vm);
@@ -173,17 +194,18 @@ public class EnhancedHealthcareSimulation {
         System.out.println("   Creating Monitoring VMs (Balanced configuration):");
         for (int i = 4; i < 8; i++) {
             int mips = 2000 + (i * 100);
-            Vm vm = new VmSimple(mips, 2);
+            Vm vm = new VmSimple(vmIdCounter++,mips, 2);
             vm.setRam(2048).setBw(8000).setSize(40000);
             vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
             vmList.add(vm);
+            //System.out.printf("      VM_%d: %d MIPS, 2 cores, 4GB RAM (Monitoring VMs)%n", i, mips);
         }
 
         // Consultation VMs (Cloud-optimized for high-bandwidth tasks)
         System.out.println("   Creating Consultation VMs (Cloud-optimized):");
         for (int i = 8; i < 12; i++) {
             int mips = 1500 + (i * 50);
-            Vm vm = new VmSimple(mips, 1);
+            Vm vm = new VmSimple(vmIdCounter++,mips, 1);
             vm.setRam(1024).setBw(5000).setSize(30000);
             vm.setCloudletScheduler(new CloudletSchedulerTimeShared());
             vmList.add(vm);
@@ -266,5 +288,10 @@ public class EnhancedHealthcareSimulation {
         System.out.printf("   • Performance Reports: ✅ CSV and HTML formats%n");
         System.out.printf("   • Visualization Data: ✅ Ready for charts and graphs%n");
         System.out.printf("   • Analysis Results: ✅ Statistical and comparative analysis%n");
+    }
+    
+    private static String decideVmPreference(Vm vm) {
+        // 👇 Simple logic: high-MIPS VMs for Fog, rest for Cloud
+        return vm.getMips() > 2500 ? "Fog_DC" : "Cloud_DC";
     }
 }
