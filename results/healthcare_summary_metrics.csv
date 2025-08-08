@@ -1,5 +1,5 @@
 Metric,Value
-Total_Tasks_Processed,36
-Overall_SLA_Compliance,80.56
-Avg_Response_Time,15.80
-Fog_Task_Percentage,58.33
+Total_Tasks_Processed,20
+Overall_SLA_Compliance,95.00
+Avg_Response_Time,8.61
+Fog_Task_Percentage,70.00
