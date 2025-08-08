@@ -12,6 +12,8 @@ import org.cloudbus.cloudsim.vms.Vm;
 
 import org.cloudbus.cloudsim.fec_healthsim.queuing.HealthcareQueueManager;
 import org.cloudbus.cloudsim.fec_healthsim.data.*;
+import org.cloudbus.cloudsim.fec_healthsim.core.TaskPerformanceRecord;
+
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -476,33 +478,3 @@ public class EnhancedHealthcareServiceBroker extends DatacenterBrokerSimple {
     public HealthcareQueueManager getQueueManager() { return queueManager; }
 }
 
-/**
- * Task performance record for comprehensive analysis
- */
-class TaskPerformanceRecord {
-    final int taskId;
-    final int patientId;
-    final UrgencyLevel urgency;
-    final ServiceType serviceType;
-    final String datacenter;
-    final double waitingTime;
-    final double executionTime;
-    final double totalResponseTime;
-    final double expectedSla;
-    final boolean slaCompliant;
-
-    TaskPerformanceRecord(int taskId, int patientId, UrgencyLevel urgency, ServiceType serviceType,
-                          String datacenter, double waitingTime, double executionTime,
-                          double totalResponseTime, double expectedSla, boolean slaCompliant) {
-        this.taskId = taskId;
-        this.patientId = patientId;
-        this.urgency = urgency;
-        this.serviceType = serviceType;
-        this.datacenter = datacenter;
-        this.waitingTime = waitingTime;
-        this.executionTime = executionTime;
-        this.totalResponseTime = totalResponseTime;
-        this.expectedSla = expectedSla;
-        this.slaCompliant = slaCompliant;
-    }
-}

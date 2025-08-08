@@ -1,159 +1,117 @@
 package org.cloudbus.cloudsim.fec_healthsim.core;
 
+import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicy;
 import org.cloudbus.cloudsim.allocationpolicies.VmAllocationPolicyAbstract;
 import org.cloudbus.cloudsim.hosts.Host;
 import org.cloudbus.cloudsim.hosts.HostSuitability;
 import org.cloudbus.cloudsim.vms.Vm;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * A custom VM allocation policy for a healthcare fog-cloud system in CloudSim Plus 6.2.7.
- * This policy allocates VMs to hosts based on a preferred datacenter, ensuring VMs are only
- * placed in the intended datacenter.
+ * Custom VM Allocation Policy for Healthcare Fog-Cloud System
+ * Ensures VMs are allocated according to intended datacenter assignments
  */
 public class HealthcareVmAllocationPolicy extends VmAllocationPolicyAbstract {
-
+    
+    // Map to store intended datacenter for each VM
     private final Map<Long, String> vmDatacenterMap;
     private final String datacenterName;
-
-    /**
-     * Creates a new HealthcareVmAllocationPolicy for a specific datacenter.
-     *
-     * @param datacenterName the name of the datacenter this policy is associated with
-     */
+    
     public HealthcareVmAllocationPolicy(String datacenterName) {
         super();
-        this.datacenterName = datacenterName != null ? datacenterName : "";
+        this.datacenterName = datacenterName;
         this.vmDatacenterMap = new HashMap<>();
     }
-
+    
     /**
-     * Sets the preferred datacenter for a VM.
-     *
-     * @param vm the VM to set the preference for
-     * @param intendedDatacenter the name of the intended datacenter
+     * Sets the intended datacenter for a VM
      */
     public void setVmDatacenterPreference(Vm vm, String intendedDatacenter) {
-        if (vm == null || intendedDatacenter == null) {
-            System.out.printf("⚠️ Invalid VM or datacenter provided for preference setting%n");
-            return;
-        }
         vmDatacenterMap.put(vm.getId(), intendedDatacenter);
         System.out.printf("🎯 VM %d preference set to: %s%n", vm.getId(), intendedDatacenter);
     }
-
-    /**
-     * Allocates a host for the given VM if the datacenter matches the VM's preference.
-     *
-     * @param vm the VM to allocate a host for
-     * @return true if a suitable host was found and the VM was allocated, false otherwise
-     */
+    
     @Override
-    public boolean allocateHostForVm(Vm vm) {
-        if (vm == null) {
-            System.out.printf("❌ Null VM provided for allocation%n");
-            return false;
+    public HostSuitability allocateHostForVm(Vm vm) {
+        // Check if this VM should be allocated to this datacenter
+        String intendedDC = vmDatacenterMap.get(vm.getId());
+        
+        if (intendedDC != null && !intendedDC.equals(datacenterName)) {
+            System.out.printf("🚫 Rejecting VM %d allocation (intended for %s, this is %s)%n", 
+                            vm.getId(), intendedDC, datacenterName);
+            return new HostSuitability("VM is intended for " + intendedDC + " but this is " + datacenterName); // Reject allocation
         }
-
-        String intendedDC = vmDatacenterMap.getOrDefault(vm.getId(), "");
-        if (!intendedDC.equals(datacenterName)) {
-            System.out.printf("🚫 VM %d intended for %s, this is %s — skipping allocation%n",
-                    vm.getId(), intendedDC, datacenterName);
-            return false;
-        }
-
-        for (Host host : getHostList()) {
-            if (host == null) {
-                continue;
-            }
-            HostSuitability suitability = host.isSuitableForVm(vm);
-            if (suitability.isSuitable()) {
-                suitability = host.createVm(vm);
-                if (suitability.isSuitable()) {
-                    System.out.printf("✅ VM %d allocated to Host %d in %s%n",
-                            vm.getId(), host.getId(), datacenterName);
-                    return true;
-                }
+        
+        // Find suitable host in this datacenter
+        Optional<Host> hostOptional = findSuitableHost(vm);
+        if (hostOptional.isPresent()) {
+            Host host = hostOptional.get();
+            HostSuitability suitability = host.createVm(vm);
+//            boolean allocated = host.createVm(vm);
+            if (suitability.fully()) {
+                System.out.printf("✅ VM %d successfully allocated to %s (Host %d)%n",
+                        vm.getId(), datacenterName, host.getId());
+                return suitability;
             }
         }
-
+        
         System.out.printf("❌ No suitable host found for VM %d in %s%n", vm.getId(), datacenterName);
-        return false;
+        return new HostSuitability("VM is intended for " + intendedDC + " but this is " + datacenterName);
     }
-
+    
     /**
-     * Allocates a specific host for the given VM if the datacenter matches and the host is suitable.
-     *
-     * @param vm the VM to allocate
-     * @param host the host to allocate the VM to
-     * @return true if the VM was successfully allocated to the host, false otherwise
+     * Finds the most suitable host for VM allocation
      */
+    private Optional<Host> findSuitableHost(Vm vm) {
+        return getHostList().stream()
+        		.filter(host -> host.isSuitableForVm(vm))
+            .min(Comparator.comparingDouble(host -> {
+                // Prefer less loaded hosts
+            	return host.getVmList().size(); // Simple load metric
+            }));
+    }
+    
     @Override
-    public boolean allocateHostForVm(Vm vm, Host host) {
-        if (vm == null || host == null) {
-            System.out.printf("❌ Null VM or Host provided for allocation%n");
-            return false;
+    public HostSuitability allocateHostForVm(Vm vm, Host host) {
+        // Check datacenter preference first
+        String intendedDC = vmDatacenterMap.get(vm.getId());
+        if (intendedDC != null && !intendedDC.equals(datacenterName)) {
+            return new HostSuitability("VM is intended for " + intendedDC + " but this is " + datacenterName);
         }
 
-        String intendedDC = vmDatacenterMap.getOrDefault(vm.getId(), "");
-        if (!intendedDC.equals(datacenterName)) {
-            System.out.printf("🚫 VM %d intended for %s, this is %s — skipping allocation%n",
-                    vm.getId(), intendedDC, datacenterName);
-            return false;
+        HostSuitability suitability = host.createVm(vm);
+        if (suitability.fully()) {
+            System.out.printf("✅ VM %d allocated to specific host %d in %s%n",
+                    vm.getId(), host.getId(), datacenterName);
+        } else {
+            System.out.printf("❌ Allocation failed for VM %d at host %d (%s)%n",
+                    vm.getId(), host.getId(), suitability.toString());
         }
 
-        HostSuitability suitability = host.isSuitableForVm(vm);
-        if (suitability.isSuitable()) {
-            suitability = host.createVm(vm);
-            if (suitability.isSuitable()) {
-                System.out.printf("✅ VM %d allocated to Host %d in %s%n",
-                        vm.getId(), host.getId(), datacenterName);
-                return true;
-            }
-        }
-
-        System.out.printf("❌ Host %d not suitable for VM %d in %s%n",
-                host.getId(), vm.getId(), datacenterName);
-        return false;
+        return suitability;
     }
 
-    /**
-     * Deallocates the host for the given VM.
-     *
-     * @param vm the VM to deallocate
-     */
+    
     @Override
     public void deallocateHostForVm(Vm vm) {
-        if (vm == null) {
-            System.out.printf("❌ Null VM provided for deallocation%n");
-            return;
-        }
         Host host = vm.getHost();
-        if (host != null && host != Host.NULL) {
+        if (host != null) {
             host.destroyVm(vm);
             System.out.printf("🗑️ VM %d deallocated from %s%n", vm.getId(), datacenterName);
         }
     }
-
-    /**
-     * Finds a suitable host for the given VM.
-     *
-     * @param vm the VM to find a host for
-     * @return an Optional containing a suitable host, or empty if none is found
-     */
+    
+    
     @Override
     protected Optional<Host> defaultFindHostForVm(Vm vm) {
-        if (vm == null) {
-            return Optional.empty();
+        // Check datacenter preference first
+        String intendedDC = vmDatacenterMap.get(vm.getId());
+        if (intendedDC != null && !intendedDC.equals(datacenterName)) {
+            return Optional.empty(); // Don't find host if VM doesn't belong here
         }
-        for (Host host : getHostList()) {
-            if (host != null && host.isSuitableForVm(vm).isSuitable()) {
-                return Optional.of(host);
-            }
-        }
-        return Optional.empty();
+        
+        return findSuitableHost(vm);
     }
 }
